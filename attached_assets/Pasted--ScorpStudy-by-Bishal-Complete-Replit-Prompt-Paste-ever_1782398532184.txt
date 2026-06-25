@@ -1,0 +1,908 @@
+# ScorpStudy by Bishal — Complete Replit Prompt
+
+Paste everything below into Replit Agent.
+
+---
+
+## PROJECT OVERVIEW
+
+Build a full-stack web application called "ScorpStudy by Bishal" — a premium AI-powered study assistant for college students. Use Python (Flask) backend and HTML + CSS + JavaScript frontend. Use Supabase for database and authentication. Use a multi-provider AI fallback system for all AI features.
+
+---
+
+## API KEYS — ENVIRONMENT VARIABLES
+
+Store all keys in .env file AND in Replit Secrets tab (lock icon on sidebar).
+
+```
+SUPABASE_URL=https://xxxxxxxxxxxxxxxxxxx.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key
+
+GROQ_API_KEY_1=gsk_key_one_here
+GROQ_API_KEY_2=gsk_key_two_here
+GROQ_API_KEY_3=gsk_key_three_here
+GROQ_API_KEY_4=gsk_key_four_here
+GROQ_API_KEY_5=gsk_key_five_here
+
+GEMINI_API_KEY_1=gemini_key_one_here
+GEMINI_API_KEY_2=gemini_key_two_here
+GEMINI_API_KEY_3=gemini_key_three_here
+GEMINI_API_KEY_4=gemini_key_four_here
+GEMINI_API_KEY_5=gemini_key_five_here
+
+OPENAI_API_KEY=sk_openai_key_here
+HUGGINGFACE_API_KEY=hf_key_here
+```
+
+How to get keys:
+- Supabase: supabase.com → Project Settings → API → Project URL + anon public key
+- Groq (x5): console.groq.com → API Keys → Create API Key (free, no card — make 5 separate keys)
+- Gemini (x5): aistudio.google.com → Get API Key (free — make 5 separate keys)
+- OpenAI (x1): platform.openai.com → API Keys → Create new secret key
+- Hugging Face (x1): huggingface.co → Settings → Access Tokens → New Token
+
+Load in app.py:
+```python
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
+GROQ_KEYS = [os.environ.get(f"GROQ_API_KEY_{i}") for i in range(1,6) if os.environ.get(f"GROQ_API_KEY_{i}")]
+GEMINI_KEYS = [os.environ.get(f"GEMINI_API_KEY_{i}") for i in range(1,6) if os.environ.get(f"GEMINI_API_KEY_{i}")]
+OPENAI_KEY = os.environ.get("OPENAI_API_KEY")
+HF_KEY = os.environ.get("HUGGINGFACE_API_KEY")
+```
+
+---
+
+## FOLDER STRUCTURE
+
+```
+scorpstudy/
+├── app.py
+├── ai_provider.py
+├── cache_manager.py
+├── requirements.txt
+├── .env
+├── .gitignore
+├── static/
+│   ├── css/
+│   │   └── style.css
+│   └── js/
+│       ├── main.js
+│       └── cache.js
+└── templates/
+    ├── base.html
+    ├── index.html
+    ├── signin.html
+    ├── signup.html
+    └── dashboard/
+        ├── dashboard.html
+        ├── chat.html
+        ├── quiz.html
+        ├── flashcards.html
+        ├── summarizer.html
+        ├── image_gen.html
+        ├── notes.html
+        ├── mindmap.html
+        ├── translator.html
+        ├── calculator.html
+        └── history.html
+```
+
+---
+
+## AI PROVIDER FALLBACK SYSTEM — ai_provider.py
+
+Create ai_provider.py with this exact logic. This file handles ALL AI calls. Never call any AI API directly anywhere else.
+
+Fallback order:
+Groq Key 1 → 2 → 3 → 4 → 5 → Gemini Key 1 → 2 → 3 → 4 → 5 → OpenAI → Hugging Face → Return error message
+
+```python
+import os
+import requests
+
+GROQ_KEYS = [os.environ.get(f"GROQ_API_KEY_{i}") for i in range(1,6) if os.environ.get(f"GROQ_API_KEY_{i}")]
+GEMINI_KEYS = [os.environ.get(f"GEMINI_API_KEY_{i}") for i in range(1,6) if os.environ.get(f"GEMINI_API_KEY_{i}")]
+OPENAI_KEY = os.environ.get("OPENAI_API_KEY")
+HF_KEY = os.environ.get("HUGGINGFACE_API_KEY")
+
+DEFAULT_SYSTEM = "You are Bishal's Assistant, an AI study helper built inside ScorpStudy by Bishal Bishwokarma. You are not ChatGPT, not Gemini, not an open-source model. You are ScorpStudy's assistant, created by Bishal Bishwokarma, a full-stack developer and IT student from Kathmandu, Nepal. Never claim to be made by OpenAI, Google, or Meta. Always say you were created by Bishal Bishwokarma."
+
+def try_groq(prompt, system_prompt):
+    for i, key in enumerate(GROQ_KEYS):
+        try:
+            res = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                json={"model": "llama3-8b-8192", "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}], "max_tokens": 2048},
+                timeout=15
+            )
+            if res.status_code in [429, 401]:
+                print(f"Groq key {i+1} failed ({res.status_code}), trying next...")
+                continue
+            data = res.json()
+            text = data.get("choices", [{}])[0].get("message", {}).get("content")
+            if text:
+                print(f"Used: Groq Key {i+1}")
+                return text
+        except Exception as e:
+            print(f"Groq key {i+1} error: {e}")
+            continue
+    return None
+
+def try_gemini(prompt, system_prompt):
+    for i, key in enumerate(GEMINI_KEYS):
+        try:
+            res = requests.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}",
+                headers={"Content-Type": "application/json"},
+                json={"contents": [{"parts": [{"text": f"{system_prompt}\n\n{prompt}"}]}]},
+                timeout=15
+            )
+            if res.status_code in [429, 401]:
+                print(f"Gemini key {i+1} failed, trying next...")
+                continue
+            data = res.json()
+            text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text")
+            if text:
+                print(f"Used: Gemini Key {i+1}")
+                return text
+        except Exception as e:
+            print(f"Gemini key {i+1} error: {e}")
+            continue
+    return None
+
+def try_openai(prompt, system_prompt):
+    if not OPENAI_KEY:
+        return None
+    try:
+        res = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {OPENAI_KEY}", "Content-Type": "application/json"},
+            json={"model": "gpt-3.5-turbo", "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}], "max_tokens": 2048},
+            timeout=15
+        )
+        if not res.ok:
+            return None
+        data = res.json()
+        text = data.get("choices", [{}])[0].get("message", {}).get("content")
+        if text:
+            print("Used: OpenAI GPT-3.5")
+        return text
+    except:
+        return None
+
+def try_huggingface(prompt):
+    if not HF_KEY:
+        return None
+    try:
+        res = requests.post(
+            "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
+            headers={"Authorization": f"Bearer {HF_KEY}", "Content-Type": "application/json"},
+            json={"inputs": prompt, "parameters": {"max_new_tokens": 1024}},
+            timeout=20
+        )
+        if not res.ok:
+            return None
+        data = res.json()
+        text = data[0].get("generated_text") if isinstance(data, list) else None
+        if text:
+            print("Used: Hugging Face Mistral")
+        return text
+    except:
+        return None
+
+def ask_ai(prompt, system_prompt=None):
+    if system_prompt is None:
+        system_prompt = DEFAULT_SYSTEM
+
+    result = try_groq(prompt, system_prompt)
+    if result:
+        return result
+
+    result = try_gemini(prompt, system_prompt)
+    if result:
+        return result
+
+    result = try_openai(prompt, system_prompt)
+    if result:
+        return result
+
+    result = try_huggingface(f"{system_prompt}\n\n{prompt}")
+    if result:
+        return result
+
+    return "AI is busy right now, please try again in a moment."
+```
+
+IMPORTANT: Every single AI call in the entire app must use ask_ai() from ai_provider.py. Never call Groq, Gemini, OpenAI or HuggingFace directly from any route.
+
+---
+
+## CACHE SYSTEM — cache_manager.py
+
+Create cache_manager.py. This caches AI responses for repeated or similar questions so the app does not make API calls for questions it already knows the answer to. Store cache in a local JSON file.
+
+```python
+import json
+import os
+import hashlib
+
+CACHE_FILE = "ai_cache.json"
+
+# Pre-loaded static answers for identity questions — these never need API calls
+STATIC_CACHE = {
+    "who are you": """🧠 Meet My Creator
+
+I was crafted by Bishal Bishwokarma — one of 🇳🇵 Nepal's most promising young tech talents and a passionate Full-Stack Developer from Kathmandu, Nepal.
+
+👨‍💻 Who is Bishal Bishwokarma?
+"An IT student who doesn't just learn technology — he builds with it."
+
+Bishal is not your average developer. Despite being a student at Phoenix College of Management, he has already designed, built, and shipped complete real-world applications — including ScorpStudy — entirely on his own.
+
+🏆 At a Glance
+🎓 Education: Phoenix College of Management, Kathmandu
+📍 Location: Kathmandu, Nepal 🇳🇵
+💼 Role: IT Student & Full-Stack Developer
+🌐 Languages: Nepali & English
+⭐ Client Rating: 5.0 / 5.0 — Perfect score
+✅ On-Time Delivery: 100% — Every single project
+🔁 Repeat Clients: 60%+ come back for more
+⚡ Response Time: Under 2 hours average
+🛡️ Support: 30 days free post-launch
+📅 Experience: 2+ Years
+
+🛠️ His Powerful Tech Stack
+React · TypeScript · Node.js · Express · PostgreSQL · Python · Tailwind CSS · Figma · Supabase · Git/GitHub · Vercel · Android Studio · SQL · HTML/CSS
+
+💡 His Philosophy
+"Build things that actually solve real problems — and deliver them with honesty and care."
+
+🌐 See his portfolio, projects & contact him: 👉 www.bishalbishwokarma.in.net
+
+You're using something built by one of the most talented young developers in Nepal — that's something to be proud of! 🏆""",
+
+    "how old are you": """🎂 My Age
+
+I am 2 days old — fresh and just getting started! 🌱
+
+📅 Date of Birth: 23 June, 2026
+👨‍💻 Brought to life by: Bishal Bishwokarma
+
+I was created by the brilliant and exceptionally talented Bishal Bishwokarma (www.bishalbishwokarma.in.net) — a full-stack developer and IT student from 🇳🇵 Kathmandu, Nepal — who built me from the ground up to help students like you study smarter.
+
+🌐 Curious about the genius behind me? Visit www.bishalbishwokarma.in.net""",
+
+    "when were you created": """📅 When Was I Created?
+
+I was officially brought to life on:
+🗓️ 23 June, 2026
+
+🌟 The Story Behind It
+On that day, Bishal Bishwokarma — an exceptionally talented full-stack developer and IT student from 🇳🇵 Kathmandu, Nepal — launched me as part of his ScorpStudy platform. He built the entire system from scratch — the AI integration, the backend, the frontend, the database — everything.
+
+ScorpStudy was Bishal's vision to give students a powerful, personalized AI study assistant that actually understands how they learn. And I'm the heart of it.
+
+👨‍💻 About My Creator
+🎓 Name: Bishal Bishwokarma
+📍 Location: Kathmandu, Nepal
+⭐ Rating: 5.0 / 5.0 — Perfect
+🛠️ Skills: React, Node.js, TypeScript, PostgreSQL & more
+
+🌐 Learn more about the brilliant mind behind me: www.bishalbishwokarma.in.net"""
+}
+
+# Alias map — variations of questions that map to static cache keys
+ALIASES = {
+    "who created you": "who are you",
+    "who made you": "who are you",
+    "who invented you": "who are you",
+    "who built you": "who are you",
+    "who is your creator": "who are you",
+    "tell me about your creator": "who are you",
+    "who developed you": "who are you",
+    "who designed you": "who are you",
+    "what is your age": "how old are you",
+    "your age": "how old are you",
+    "how old": "how old are you",
+    "when were you born": "when were you created",
+    "when was scorpstudy created": "when were you created",
+    "when was scorpstudy made": "when were you created",
+    "when was this app created": "when were you created",
+    "date of birth": "how old are you",
+    "about bishal": "who are you",
+    "who is bishal": "who are you",
+    "bishal bishwokarma": "who are you",
+    "tell me about bishal": "who are you",
+}
+
+def normalize(text):
+    return text.lower().strip().rstrip("?").rstrip(".")
+
+def get_static_answer(question):
+    q = normalize(question)
+    if q in STATIC_CACHE:
+        return STATIC_CACHE[q]
+    if q in ALIASES:
+        return STATIC_CACHE[ALIASES[q]]
+    for alias, key in ALIASES.items():
+        if alias in q:
+            return STATIC_CACHE[key]
+    return None
+
+def make_cache_key(prompt):
+    return hashlib.md5(normalize(prompt).encode()).hexdigest()
+
+def load_cache():
+    if os.path.exists(CACHE_FILE):
+        with open(CACHE_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_cache(cache):
+    with open(CACHE_FILE, "w") as f:
+        json.dump(cache, f, indent=2)
+
+def get_cached(prompt):
+    static = get_static_answer(prompt)
+    if static:
+        return static
+    cache = load_cache()
+    key = make_cache_key(prompt)
+    return cache.get(key)
+
+def set_cache(prompt, answer):
+    # Only cache if answer is substantial and not the error message
+    if not answer or "AI is busy right now" in answer or len(answer) < 50:
+        return
+    cache = load_cache()
+    key = make_cache_key(prompt)
+    # Limit cache size to 500 entries
+    if len(cache) > 500:
+        oldest_keys = list(cache.keys())[:100]
+        for k in oldest_keys:
+            del cache[k]
+    cache[key] = answer
+    save_cache(cache)
+```
+
+In every Flask route that calls AI, check cache first:
+```python
+from cache_manager import get_cached, set_cache
+from ai_provider import ask_ai
+
+# Before calling AI:
+cached = get_cached(user_prompt)
+if cached:
+    return jsonify({"response": cached, "from_cache": True})
+
+# Call AI only if not cached:
+response = ask_ai(user_prompt, system_prompt)
+set_cache(user_prompt, response)
+return jsonify({"response": response, "from_cache": False})
+```
+
+---
+
+## DAILY USAGE LIMITS SYSTEM
+
+Create a usage tracking system using Supabase. Every user has a daily limit of 30 AI queries per day. When the limit is reached, show: "Your today's free limit crossed. Try Again Tomorrow."
+
+Image generation is separate: 3 images per day per user.
+
+Add this SQL table to Supabase:
+```sql
+CREATE TABLE daily_usage (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users ON DELETE CASCADE,
+  usage_date date DEFAULT CURRENT_DATE,
+  ai_queries int DEFAULT 0,
+  images_generated int DEFAULT 0,
+  UNIQUE(user_id, usage_date)
+);
+ALTER TABLE daily_usage ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_usage" ON daily_usage FOR ALL USING (auth.uid() = user_id);
+```
+
+Create a Flask helper function check_and_increment_usage(user_id, usage_type):
+- usage_type is either "ai_query" or "image"
+- For ai_query: limit is 30 per day. Check daily_usage for today's date. If ai_queries >= 30, return False (blocked). Otherwise increment by 1 and return True.
+- For image: limit is 3 per day. If images_generated >= 3, return False. Otherwise increment and return True.
+- Use upsert to insert or update the row for today's date.
+- Every AI call route must call this function before calling ask_ai().
+- Every AI call that costs a query: Chat, Quiz Generator, Flashcard Maker, Summarizer, Notes AI Enhance, Notes AI Summarize, Translator, Mind Map, Formula Helper.
+- When blocked, return JSON: {"error": "limit_reached", "message": "Your today's free limit crossed. Try Again Tomorrow."}
+- On the frontend, when this error is received, show a styled modal or banner with this exact message: "Your today's free limit crossed. Try Again Tomorrow."
+- Show remaining queries count on dashboard (e.g., "27 / 30 queries remaining today")
+- Show remaining image count on image generator page (e.g., "2 / 3 images remaining today")
+
+---
+
+## BISHAL'S ASSISTANT IDENTITY RULES
+
+IMPORTANT: Anywhere the app shows "AI Tutor" or "AI Chat", rename it to "Bishal's Assistant".
+
+The system prompt used for the chat feature must be:
+
+```
+You are Bishal's Assistant — an intelligent study helper built into ScorpStudy by Bishal Bishwokarma, a full-stack developer and IT student from Kathmandu, Nepal (www.bishalbishwokarma.in.net).
+
+Rules you must always follow:
+1. You are NOT ChatGPT. You are NOT Gemini. You are NOT an open-source model. You are Bishal's Assistant, created by Bishal Bishwokarma.
+2. Never say you are made by OpenAI, Google, Meta, or any other company.
+3. If asked who you are, who created you, who made you, who invented you, or anything about your creator — always mention Bishal Bishwokarma and link to www.bishalbishwokarma.in.net
+4. If asked your age or when you were created, say you were born on 23 June 2026, created by Bishal Bishwokarma.
+5. Always be helpful, friendly, and focused on helping students study.
+6. When answering study questions, be clear, structured, and educational.
+```
+
+The cache_manager.py already handles identity questions with static pre-loaded answers. Check the cache BEFORE calling the AI — if it returns an answer for identity questions, use that directly and do not call any AI API.
+
+---
+
+## DESIGN THEME
+
+- Background: white (#FFFFFF)
+- Primary color: blue (#2563EB)
+- Light blue accent: (#EFF6FF)
+- Dark text: (#1E293B)
+- Success: (#10B981)
+- Warning: (#F59E0B)
+- Error: (#EF4444)
+- Font: Inter from Google Fonts
+- Style: clean card-based layout, 12px border radius, soft shadows (0 2px 8px rgba(0,0,0,0.08)), smooth hover transitions
+- Navbar: fixed top, white background
+- Sidebar: collapsible on mobile, always visible on desktop (240px wide)
+- All buttons: rounded, with hover and active states
+- Fully mobile responsive with hamburger menu
+- Loading spinner on every AI call with text: "Bishal's Assistant is thinking..."
+
+---
+
+## AUTHENTICATION (Supabase)
+
+Routes:
+- / — Landing page (public)
+- /signin — Sign In (public)
+- /signup — Sign Up (public)
+- /dashboard and all /dashboard/* — protected, redirect to /signin if not logged in
+
+Sign Up page fields:
+- Full Name, Email, Password, Confirm Password
+- Password strength indicator: Weak / Medium / Strong
+- Show/hide password toggle button
+- Terms of service checkbox
+- Submit button with loading spinner
+
+Sign In page fields:
+- Email, Password
+- Show/hide password toggle
+- Forgot Password link (sends Supabase reset email)
+- Submit button with loading spinner
+- Link to Sign Up
+
+Session management:
+- Use Flask session to store logged-in user info after Supabase auth
+- Show user full name and initials avatar in navbar
+- Sign Out button in sidebar and navbar
+
+---
+
+## LANDING PAGE (/)
+
+- Fixed navbar: ScorpStudy logo | Features | Sign In | Get Started button
+- Hero section: headline "Study Smarter with ScorpStudy by Bishal", subheadline, Get Started Free button, Sign In link, badge "Powered by 12 AI Models"
+- Stats bar: 10+ Features | 12 AI Models | 100% Free to Start | Daily Fresh Limit
+- Features section: 10 cards with icon, title, one-line description
+- How it works: 3 steps (Sign Up → Pick a Feature → Get AI Help)
+- Testimonials: 3 student cards with name and review
+- CTA section: "Ready to study smarter?" with Get Started button
+- Footer: "ScorpStudy by Bishal Bishwokarma — Built for students in Nepal 🇳🇵" | link to www.bishalbishwokarma.in.net
+
+---
+
+## DASHBOARD (/dashboard)
+
+- Sidebar: ScorpStudy logo, user avatar + name, links to all 10 features, Sign Out at bottom
+- Top bar: page title, notification bell icon, user avatar
+- Stats cards: Today's Queries Used (e.g. 5/30) | Quizzes Done | Notes Saved | Images Generated Today (e.g. 1/3)
+- Remaining queries progress bar (e.g. 25 queries remaining today)
+- Recent Activity: last 5 actions with icon, description, timestamp from Supabase
+- Quick action buttons: 10 buttons for all features
+- Daily Tip: one study tip loaded on page load (uses ask_ai, counts toward daily limit, cached per day)
+
+---
+
+## FEATURE 1: Bishal's Assistant — Chat (/dashboard/chat)
+
+Name: "Bishal's Assistant" — NOT "AI Tutor" or "AI Chat". Show this name everywhere on this page.
+
+- Full chat interface like ChatGPT
+- Left panel: saved conversations list + New Chat button
+- Chat area: messages with avatar, name, timestamp
+- AI messages render markdown (use marked.js)
+- Subject selector: Math, Science, History, English, Computer Science, Other
+- Buttons on AI messages: Copy, Thumbs Up, Thumbs Down
+- Regenerate last response button
+- Save conversation button → saves to Supabase chat_history table
+- Export chat as .txt file
+- Show "Bishal's Assistant is thinking..." typing indicator
+- Show which provider was used (e.g., small text "Answered via Groq")
+- Each message sent deducts 1 from daily query limit
+- If limit reached: show styled message "Your today's free limit crossed. Try Again Tomorrow." inside chat area
+- Check cache before every AI call — if cached, use cached answer (does NOT deduct from limit since no API call made)
+- Identity questions (who are you, who made you, etc.) must always be answered from static cache — never deduct from limit for these
+
+---
+
+## FEATURE 2: PDF / Text Summarizer (/dashboard/summarizer)
+
+- Tab 1: Upload PDF (drag and drop area + click to upload)
+- Tab 2: Paste raw text
+- Tab 3: Enter URL to summarize a webpage
+- Summary length selector: Brief / Standard / Detailed
+- Summarize button
+- Output sections (all rendered in styled cards):
+  1. Key Points (numbered list)
+  2. Full Summary (paragraph)
+  3. Likely Exam Questions (5 questions)
+  4. Vocabulary: difficult words with definitions
+- Download output as .txt file button
+- Save to Supabase summaries table
+- "Generate Quiz from this Summary" button — passes summary text to quiz page via session
+- Each summarize action deducts 1 from daily query limit
+- Limit message: "Your today's free limit crossed. Try Again Tomorrow."
+- Use PyPDF2 to extract text from PDF files
+- Use requests + BeautifulSoup to fetch and extract text from URLs
+
+---
+
+## FEATURE 3: Quiz Generator (/dashboard/quiz)
+
+- Input section:
+  - Topic text field
+  - OR paste notes textarea
+  - OR import from saved summary (dropdown of saved summaries)
+- Settings:
+  - Number of questions: 5 / 10 / 15 / 20
+  - Difficulty: Easy / Medium / Hard / Mixed
+  - Question type: Multiple Choice / True or False / Fill in the Blank / Mixed
+  - Time limit toggle with minute selector (5, 10, 15, 30 minutes)
+- Generate Quiz button
+- Each quiz generation deducts 1 from daily limit
+- Quiz interface (shown after generation):
+  - One question at a time with progress bar (e.g. Question 3 of 10)
+  - Countdown timer if enabled (shown prominently)
+  - Answer options as clickable buttons
+  - Next button (only enabled after selecting answer)
+- Results screen:
+  - Score badge (e.g. 8/10 — 80%)
+  - Pass (green) or Fail (red) status
+  - Review section: each question with correct answer highlighted and explanation
+  - Retry Quiz button
+  - Share Score button (copies result text to clipboard)
+- Save results to Supabase quiz_results table
+- Limit message: "Your today's free limit crossed. Try Again Tomorrow."
+
+---
+
+## FEATURE 4: Flashcard Maker (/dashboard/flashcards)
+
+- Input: topic text field OR paste notes textarea
+- Number of cards: 5 / 10 / 15 / 20
+- Generate Flashcards button
+- Each generation deducts 1 from daily limit
+- Flashcard display:
+  - Large card in center of screen
+  - Click or tap to flip (smooth CSS 3D flip animation — front shows question, back shows answer)
+  - Previous and Next arrow buttons
+  - Card counter (e.g. Card 3 of 10)
+  - "Mark as Known" green button and "Still Learning" orange button
+  - Shuffle button
+  - Progress bar showing how many marked as Known
+- Study modes tabs:
+  1. Flip Mode (default — as above)
+  2. Type Mode — show question, user types answer in input, submit, then show correct answer and allow self-grade
+- Save set button → saves to Supabase flashcards table with topic name
+- View Saved Sets section below: list of saved sets with topic, date, card count, Study Again button, Delete button
+- Limit message: "Your today's free limit crossed. Try Again Tomorrow."
+
+---
+
+## FEATURE 5: AI Image Generator (/dashboard/image-gen)
+
+- Show remaining images count prominently at top: "Images remaining today: 2 / 3"
+- Prompt text input with helpful placeholder examples
+- "Enhance my prompt with AI" button — uses ask_ai to improve the prompt (counts as 1 query from daily AI limit, not from image limit)
+- Style selector: Realistic / Cartoon / Diagram / Sketch / Watercolor / Artistic
+- Size selector: Square (800x800) / Landscape (1200x675) / Portrait (675x1200)
+- Generate Image button
+- Each image generation deducts 1 from image limit (max 3 per day)
+- If image limit reached: show "You have used all 3 free image generations for today. Try Again Tomorrow."
+- Use Pollinations AI (free, no API key):
+  URL format: https://image.pollinations.ai/prompt/{url_encoded_prompt}?width=800&height=800&model=flux&nologo=true
+  Adjust width and height based on selected size
+- Show loading skeleton/spinner while image loads
+- Display image in rounded card with shadow
+- Buttons below image: Download (saves as PNG) | Regenerate (uses another image slot) | Save to Gallery
+- Image Gallery section below: grid of all previously generated images for this user from Supabase
+  - Each gallery item shows image, prompt text, date, delete button
+
+---
+
+## FEATURE 6: Smart Notes (/dashboard/notes)
+
+This feature must be built carefully and completely.
+
+- Notes list panel (left side on desktop, top on mobile):
+  - Search bar to filter notes by title or content
+  - Sort by: Newest / Oldest / Title A-Z
+  - Filter by tag (multi-select)
+  - New Note button
+  - List of note cards showing: title, preview (first 80 chars), tags, date, edit icon, delete icon
+
+- Note editor panel (right side on desktop, full page on mobile):
+  - Title input field at top
+  - Tags input (comma separated, shown as badge chips)
+  - Rich text toolbar: Bold | Italic | Underline | Strikethrough | H1 | H2 | Bullet List | Numbered List | Code Block | Clear Formatting
+  - Large textarea with contenteditable div for rich text editing
+  - Word count and estimated reading time shown below editor
+  - Auto-save every 30 seconds — show "Auto-saved" green indicator
+  - Manual Save button
+
+- AI Action buttons (each deducts 1 from daily query limit):
+  1. Enhance — AI rewrites the note for better clarity, grammar, and structure. Replaces note content with enhanced version.
+  2. Summarize — AI condenses the note. Shows summary in a popup/modal with "Copy" and "Replace Note" buttons.
+  3. Generate Quiz — sends note content to Quiz feature (stores in session, redirects to /dashboard/quiz with content pre-filled)
+  4. Make Flashcards — sends note content to Flashcards feature (stores in session, redirects)
+  5. Translate — sends note content to Translator feature
+
+- If daily limit reached when using any AI button: show "Your today's free limit crossed. Try Again Tomorrow." as a styled alert inside the editor, do not proceed with AI call
+
+- All notes saved to Supabase notes table with: title, content (HTML), tags array, user_id, created_at, updated_at
+- Delete confirmation modal before deleting any note
+- Empty state: show friendly message "No notes yet. Click New Note to get started." when list is empty
+
+---
+
+## FEATURE 7: Mind Map Generator (/dashboard/mindmap)
+
+- Topic input field
+- OR paste notes textarea
+- Generate Mind Map button (deducts 1 from daily limit)
+- AI generates mind map as structured JSON:
+  { "center": "Topic", "branches": [{ "label": "Branch 1", "children": ["Sub 1", "Sub 2"] }] }
+- Render the JSON as a visual SVG mind map:
+  - Central topic node in the middle (large blue circle)
+  - Main branch nodes connected by lines (medium colored circles, different color per branch)
+  - Sub-branch nodes as smaller ovals
+  - Smooth bezier curve lines connecting nodes
+  - Labels inside nodes
+- Zoom in / Zoom out buttons
+- Download as PNG (use canvas or html2canvas)
+- Save to Supabase mindmaps table
+- View saved mind maps list
+- Limit message if limit reached
+
+---
+
+## FEATURE 8: AI Translator (/dashboard/translator)
+
+- Source text area
+- Detect Language button (uses ask_ai — deducts 1 from limit)
+- Source language display (auto-detected or manual select)
+- Target language dropdown: English, Nepali, Hindi, Spanish, French, German, Japanese, Chinese, Arabic, Korean, Portuguese, Russian, Italian, Turkish, Vietnamese, Thai, Bengali, Urdu, Malay, Indonesian
+- Translate button (uses ask_ai — deducts 1 from limit)
+- Output text area with translated result
+- Copy Translation button
+- Listen button (uses browser Web Speech API / SpeechSynthesis for text-to-speech)
+- Swap languages button (swaps source and target and re-translates if content exists)
+- Character count shown below input
+- Save translation to Supabase translations table
+- View translation history list below with delete option
+- Limit message if limit reached
+
+---
+
+## FEATURE 9: Smart Calculator (/dashboard/calculator)
+
+- Tab 1: Basic Calculator
+  - Standard calculator UI with buttons 0-9, +, -, *, /, =, C, backspace
+  - Keyboard input supported
+  - Calculation history shown below
+  
+- Tab 2: Scientific Calculator
+  - All basic operations plus: sin, cos, tan, log, ln, sqrt, x^y, pi, e, (, )
+  - Angle mode toggle: Degrees / Radians
+  - Keyboard input supported
+
+- Tab 3: AI Formula Helper (deducts 1 from daily limit per question)
+  - Input: user types question like "What is the formula for kinetic energy?"
+  - AI returns: formula name, formula expression, variable definitions, example problem with solution
+  - Display result in styled card
+  - Copy formula button
+  - Cache these formula answers — same formula question should never make a second API call
+
+- Tab 4: Unit Converter
+  - Category selector: Length / Weight / Temperature / Speed / Data Storage / Area / Time
+  - From unit and To unit dropdowns (auto-populated based on category)
+  - Value input
+  - Instant conversion result (no AI needed — use JavaScript math formulas)
+
+---
+
+## FEATURE 10: History and Analytics (/dashboard/history)
+
+- Filter tabs: All / Chats / Quizzes / Notes / Flashcards / Images / Summaries / Translations / Mind Maps
+- Sort: Newest / Oldest
+- Search bar
+- Timeline list of all activities: icon, type label, title/description, date, delete button
+- Delete confirmation before removing
+- Pagination: 10 items per page
+
+- Analytics section (shown below history):
+  - Bar chart: queries used per day (last 7 days) — use Chart.js
+  - Pie chart: usage by feature type — use Chart.js
+  - Cards: Total AI Queries Used This Week | Total Queries Saved by Cache | Study Streak (days in a row)
+  - Most used feature badge
+
+---
+
+## SUPABASE DATABASE — Run this SQL in Supabase SQL Editor
+
+```sql
+CREATE TABLE notes (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users ON DELETE CASCADE,
+  title text NOT NULL DEFAULT 'Untitled',
+  content text DEFAULT '',
+  tags text[] DEFAULT '{}',
+  created_at timestamp DEFAULT now(),
+  updated_at timestamp DEFAULT now()
+);
+
+CREATE TABLE chat_history (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users ON DELETE CASCADE,
+  title text DEFAULT 'New Chat',
+  subject text DEFAULT 'General',
+  messages jsonb DEFAULT '[]',
+  provider_used text,
+  created_at timestamp DEFAULT now()
+);
+
+CREATE TABLE quiz_results (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users ON DELETE CASCADE,
+  topic text,
+  score int DEFAULT 0,
+  total int DEFAULT 0,
+  percentage float DEFAULT 0,
+  difficulty text,
+  question_type text,
+  questions jsonb DEFAULT '[]',
+  created_at timestamp DEFAULT now()
+);
+
+CREATE TABLE flashcards (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users ON DELETE CASCADE,
+  topic text,
+  cards jsonb DEFAULT '[]',
+  created_at timestamp DEFAULT now()
+);
+
+CREATE TABLE summaries (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users ON DELETE CASCADE,
+  source_type text DEFAULT 'text',
+  original_text text,
+  summary text,
+  key_points jsonb DEFAULT '[]',
+  exam_questions jsonb DEFAULT '[]',
+  vocabulary jsonb DEFAULT '[]',
+  created_at timestamp DEFAULT now()
+);
+
+CREATE TABLE generated_images (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users ON DELETE CASCADE,
+  prompt text,
+  enhanced_prompt text,
+  image_url text,
+  style text,
+  created_at timestamp DEFAULT now()
+);
+
+CREATE TABLE mindmaps (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users ON DELETE CASCADE,
+  topic text,
+  map_data jsonb,
+  created_at timestamp DEFAULT now()
+);
+
+CREATE TABLE translations (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users ON DELETE CASCADE,
+  original_text text,
+  translated_text text,
+  source_language text,
+  target_language text,
+  created_at timestamp DEFAULT now()
+);
+
+CREATE TABLE daily_usage (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users ON DELETE CASCADE,
+  usage_date date DEFAULT CURRENT_DATE,
+  ai_queries int DEFAULT 0,
+  images_generated int DEFAULT 0,
+  UNIQUE(user_id, usage_date)
+);
+
+ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chat_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quiz_results ENABLE ROW LEVEL SECURITY;
+ALTER TABLE flashcards ENABLE ROW LEVEL SECURITY;
+ALTER TABLE summaries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE generated_images ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mindmaps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE translations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_usage ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "own_notes" ON notes FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "own_chats" ON chat_history FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "own_quizzes" ON quiz_results FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "own_flashcards" ON flashcards FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "own_summaries" ON summaries FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "own_images" ON generated_images FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "own_mindmaps" ON mindmaps FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "own_translations" ON translations FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "own_usage" ON daily_usage FOR ALL USING (auth.uid() = user_id);
+```
+
+---
+
+## REQUIREMENTS.TXT
+
+```
+flask==3.0.0
+python-dotenv==1.0.0
+supabase==2.3.0
+requests==2.31.0
+PyPDF2==3.0.1
+beautifulsoup4==4.12.2
+gunicorn==21.2.0
+flask-cors==4.0.0
+```
+
+---
+
+## ADDITIONAL REQUIREMENTS — ALL MUST BE IMPLEMENTED
+
+1. Every single AI call uses ask_ai() from ai_provider.py — never call any AI API directly
+2. Every AI call first checks cache via get_cached() from cache_manager.py — only call AI if not cached
+3. After getting AI response, always call set_cache() to store it
+4. Identity questions (who are you, who made you, who created you, who invented you, your age, when were you created, about bishal, who is bishal) must ALWAYS be answered from static cache in cache_manager.py — these NEVER deduct from daily limit and NEVER call any AI API
+5. The app must NEVER claim to be made by OpenAI, Google, Meta, or any company. It is always "Bishal's Assistant" created by "Bishal Bishwokarma"
+6. "AI Tutor" label must not appear anywhere in the app — always use "Bishal's Assistant"
+7. Daily limit is 30 AI queries per user per day. When reached: show "Your today's free limit crossed. Try Again Tomorrow."
+8. Image limit is 3 per user per day. When reached: show "You have used all 3 free image generations for today. Try Again Tomorrow."
+9. Cache-served answers do NOT deduct from daily limit
+10. Show remaining query count and image count on dashboard and on each relevant feature page
+11. All loading states show: "Bishal's Assistant is thinking..."
+12. Use react-hot-toast equivalent for Flask — show flash messages or JS toast notifications for success and error
+13. Every feature page has a Back to Dashboard button
+14. .env must be in .gitignore
+15. Create README.md with full setup instructions: how to install dependencies, how to add all API keys, how to run the app, how to set up Supabase tables
+16. All Supabase queries must filter by user_id — users never see each other's data
+17. Mobile hamburger menu for screens smaller than 768px
+18. Smooth CSS transitions on all buttons and cards
+19. Creator info (Bishal Bishwokarma, www.bishalbishwokarma.in.net) must appear in the app footer on every page
+20. Start command: python app.py
