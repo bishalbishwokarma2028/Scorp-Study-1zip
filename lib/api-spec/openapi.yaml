@@ -200,7 +200,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EnhancePromptResponse"
+                $ref: "#/components/schemas/PromptEnhancement"
         "429":
           description: Daily limit reached
           content:
@@ -920,7 +920,7 @@ components:
         - prompt
         - userId
 
-    EnhancePromptResponse:
+    PromptEnhancement:
       type: object
       properties:
         enhancedPrompt:

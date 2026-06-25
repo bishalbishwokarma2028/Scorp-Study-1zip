@@ -5,7 +5,10 @@
  * ScorpStudy by Bishal API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { Flashcard } from './flashcard';
 
-export interface HealthStatus {
-  status: string;
+export interface FlashcardSetInput {
+  topic: string;
+  cards: Flashcard[];
+  userId: string;
 }

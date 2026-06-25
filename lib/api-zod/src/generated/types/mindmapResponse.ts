@@ -5,7 +5,9 @@
  * ScorpStudy by Bishal API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { MindmapNode } from './mindmapNode';
 
-export interface HealthStatus {
-  status: string;
+export interface MindmapResponse {
+  center: string;
+  branches: MindmapNode[];
 }
