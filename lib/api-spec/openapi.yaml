@@ -3,13 +3,21 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: ScorpStudy by Bishal API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: ai
+    description: AI operations (chat, quiz, flashcards, summarize, translate, mindmap, image)
+  - name: notes
+    description: Smart notes operations
+  - name: usage
+    description: Daily usage tracking
+  - name: history
+    description: User history and analytics
 paths:
   /healthz:
     get:
@@ -24,6 +32,619 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /ai/chat:
+    post:
+      operationId: aiChat
+      tags: [ai]
+      summary: Send a message to Bishal's Assistant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatInput"
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiResponse"
+        "429":
+          description: Daily limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitError"
+
+  /ai/quiz:
+    post:
+      operationId: generateQuiz
+      tags: [ai]
+      summary: Generate a quiz from a topic or notes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizInput"
+      responses:
+        "200":
+          description: Generated quiz questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizResponse"
+        "429":
+          description: Daily limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitError"
+
+  /ai/flashcards:
+    post:
+      operationId: generateFlashcards
+      tags: [ai]
+      summary: Generate flashcards from a topic or notes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FlashcardInput"
+      responses:
+        "200":
+          description: Generated flashcards
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlashcardResponse"
+        "429":
+          description: Daily limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitError"
+
+  /ai/summarize:
+    post:
+      operationId: summarizeText
+      tags: [ai]
+      summary: Summarize text content
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SummarizeInput"
+      responses:
+        "200":
+          description: Summary result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryResponse"
+        "429":
+          description: Daily limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitError"
+
+  /ai/translate:
+    post:
+      operationId: translateText
+      tags: [ai]
+      summary: Translate text to a target language
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranslateInput"
+      responses:
+        "200":
+          description: Translation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranslateResponse"
+        "429":
+          description: Daily limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitError"
+
+  /ai/mindmap:
+    post:
+      operationId: generateMindmap
+      tags: [ai]
+      summary: Generate a mind map from a topic or notes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MindmapInput"
+      responses:
+        "200":
+          description: Mind map data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MindmapResponse"
+        "429":
+          description: Daily limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitError"
+
+  /ai/enhance-prompt:
+    post:
+      operationId: enhancePrompt
+      tags: [ai]
+      summary: Enhance an image generation prompt with AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnhancePromptInput"
+      responses:
+        "200":
+          description: Enhanced prompt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnhancePromptResponse"
+        "429":
+          description: Daily limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitError"
+
+  /ai/formula:
+    post:
+      operationId: getFormula
+      tags: [ai]
+      summary: Get formula explanation from AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FormulaInput"
+      responses:
+        "200":
+          description: Formula response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiResponse"
+        "429":
+          description: Daily limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitError"
+
+  /ai/enhance-note:
+    post:
+      operationId: enhanceNote
+      tags: [ai]
+      summary: Enhance a note with AI for clarity and structure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteAiInput"
+      responses:
+        "200":
+          description: Enhanced note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiResponse"
+        "429":
+          description: Daily limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitError"
+
+  /ai/summarize-note:
+    post:
+      operationId: summarizeNote
+      tags: [ai]
+      summary: Summarize a note with AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteAiInput"
+      responses:
+        "200":
+          description: Note summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiResponse"
+        "429":
+          description: Daily limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitError"
+
+  /notes:
+    get:
+      operationId: listNotes
+      tags: [notes]
+      summary: List all notes for the current user
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, oldest, title]
+      responses:
+        "200":
+          description: List of notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Note"
+    post:
+      operationId: createNote
+      tags: [notes]
+      summary: Create a new note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteInput"
+      responses:
+        "201":
+          description: Created note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+
+  /notes/{id}:
+    get:
+      operationId: getNote
+      tags: [notes]
+      summary: Get a note by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateNote
+      tags: [notes]
+      summary: Update a note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteUpdate"
+      responses:
+        "200":
+          description: Updated note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+    delete:
+      operationId: deleteNote
+      tags: [notes]
+      summary: Delete a note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /usage:
+    get:
+      operationId: getDailyUsage
+      tags: [usage]
+      summary: Get current user's daily usage stats
+      responses:
+        "200":
+          description: Daily usage
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyUsage"
+
+  /quiz-results:
+    get:
+      operationId: listQuizResults
+      tags: [history]
+      summary: List quiz results for the current user
+      responses:
+        "200":
+          description: List of quiz results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuizResult"
+    post:
+      operationId: saveQuizResult
+      tags: [history]
+      summary: Save a quiz result
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizResultInput"
+      responses:
+        "201":
+          description: Saved quiz result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizResult"
+
+  /flashcard-sets:
+    get:
+      operationId: listFlashcardSets
+      tags: [history]
+      summary: List saved flashcard sets
+      responses:
+        "200":
+          description: List of flashcard sets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FlashcardSet"
+    post:
+      operationId: saveFlashcardSet
+      tags: [history]
+      summary: Save a flashcard set
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FlashcardSetInput"
+      responses:
+        "201":
+          description: Saved flashcard set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlashcardSet"
+
+  /flashcard-sets/{id}:
+    delete:
+      operationId: deleteFlashcardSet
+      tags: [history]
+      summary: Delete a flashcard set
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /summaries:
+    get:
+      operationId: listSummaries
+      tags: [history]
+      summary: List saved summaries
+      responses:
+        "200":
+          description: List of summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Summary"
+    post:
+      operationId: saveSummary
+      tags: [history]
+      summary: Save a summary
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SummaryInput"
+      responses:
+        "201":
+          description: Saved summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Summary"
+
+  /images:
+    get:
+      operationId: listImages
+      tags: [history]
+      summary: List generated images
+      responses:
+        "200":
+          description: List of images
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GeneratedImage"
+    post:
+      operationId: saveImage
+      tags: [history]
+      summary: Save a generated image
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GeneratedImageInput"
+      responses:
+        "201":
+          description: Saved image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratedImage"
+
+  /images/{id}:
+    delete:
+      operationId: deleteImage
+      tags: [history]
+      summary: Delete an image
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /mindmaps:
+    get:
+      operationId: listMindmaps
+      tags: [history]
+      summary: List saved mind maps
+      responses:
+        "200":
+          description: List of mind maps
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Mindmap"
+    post:
+      operationId: saveMindmap
+      tags: [history]
+      summary: Save a mind map
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MindmapSaveInput"
+      responses:
+        "201":
+          description: Saved mind map
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mindmap"
+
+  /translations:
+    get:
+      operationId: listTranslations
+      tags: [history]
+      summary: List translation history
+      responses:
+        "200":
+          description: List of translations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Translation"
+    post:
+      operationId: saveTranslation
+      tags: [history]
+      summary: Save a translation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranslationInput"
+      responses:
+        "201":
+          description: Saved translation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Translation"
+
+  /translations/{id}:
+    delete:
+      operationId: deleteTranslation
+      tags: [history]
+      summary: Delete a translation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /history:
+    get:
+      operationId: getHistory
+      tags: [history]
+      summary: Get combined activity history with analytics
+      responses:
+        "200":
+          description: History and analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoryResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +655,730 @@ components:
       required:
         - status
 
+    LimitError:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+        - message
+
+    AiResponse:
+      type: object
+      properties:
+        response:
+          type: string
+        fromCache:
+          type: boolean
+        provider:
+          type: string
+      required:
+        - response
+        - fromCache
+
+    ChatInput:
+      type: object
+      properties:
+        message:
+          type: string
+        subject:
+          type: string
+        conversationHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        userId:
+          type: string
+      required:
+        - message
+        - userId
+
+    ChatMessage:
+      type: object
+      properties:
+        role:
+          type: string
+        content:
+          type: string
+      required:
+        - role
+        - content
+
+    QuizInput:
+      type: object
+      properties:
+        topic:
+          type: string
+        notes:
+          type: string
+        numQuestions:
+          type: integer
+        difficulty:
+          type: string
+        questionType:
+          type: string
+        userId:
+          type: string
+      required:
+        - userId
+
+    QuizQuestion:
+      type: object
+      properties:
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctAnswer:
+          type: string
+        explanation:
+          type: string
+        type:
+          type: string
+      required:
+        - question
+        - correctAnswer
+        - type
+
+    QuizResponse:
+      type: object
+      properties:
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestion"
+        topic:
+          type: string
+      required:
+        - questions
+
+    FlashcardInput:
+      type: object
+      properties:
+        topic:
+          type: string
+        notes:
+          type: string
+        numCards:
+          type: integer
+        userId:
+          type: string
+      required:
+        - userId
+
+    Flashcard:
+      type: object
+      properties:
+        front:
+          type: string
+        back:
+          type: string
+      required:
+        - front
+        - back
+
+    FlashcardResponse:
+      type: object
+      properties:
+        cards:
+          type: array
+          items:
+            $ref: "#/components/schemas/Flashcard"
+        topic:
+          type: string
+      required:
+        - cards
+
+    SummarizeInput:
+      type: object
+      properties:
+        text:
+          type: string
+        url:
+          type: string
+        length:
+          type: string
+          enum: [brief, standard, detailed]
+        userId:
+          type: string
+      required:
+        - userId
+
+    SummaryResponse:
+      type: object
+      properties:
+        summary:
+          type: string
+        keyPoints:
+          type: array
+          items:
+            type: string
+        examQuestions:
+          type: array
+          items:
+            type: string
+        vocabulary:
+          type: array
+          items:
+            $ref: "#/components/schemas/VocabWord"
+      required:
+        - summary
+        - keyPoints
+        - examQuestions
+        - vocabulary
+
+    VocabWord:
+      type: object
+      properties:
+        word:
+          type: string
+        definition:
+          type: string
+      required:
+        - word
+        - definition
+
+    TranslateInput:
+      type: object
+      properties:
+        text:
+          type: string
+        targetLanguage:
+          type: string
+        sourceLanguage:
+          type: string
+        userId:
+          type: string
+      required:
+        - text
+        - targetLanguage
+        - userId
+
+    TranslateResponse:
+      type: object
+      properties:
+        translation:
+          type: string
+        detectedLanguage:
+          type: string
+        provider:
+          type: string
+      required:
+        - translation
+
+    MindmapInput:
+      type: object
+      properties:
+        topic:
+          type: string
+        notes:
+          type: string
+        userId:
+          type: string
+      required:
+        - userId
+
+    MindmapNode:
+      type: object
+      properties:
+        label:
+          type: string
+        children:
+          type: array
+          items:
+            type: string
+      required:
+        - label
+        - children
+
+    MindmapResponse:
+      type: object
+      properties:
+        center:
+          type: string
+        branches:
+          type: array
+          items:
+            $ref: "#/components/schemas/MindmapNode"
+      required:
+        - center
+        - branches
+
+    EnhancePromptInput:
+      type: object
+      properties:
+        prompt:
+          type: string
+        userId:
+          type: string
+      required:
+        - prompt
+        - userId
+
+    EnhancePromptResponse:
+      type: object
+      properties:
+        enhancedPrompt:
+          type: string
+      required:
+        - enhancedPrompt
+
+    FormulaInput:
+      type: object
+      properties:
+        question:
+          type: string
+        userId:
+          type: string
+      required:
+        - question
+        - userId
+
+    NoteAiInput:
+      type: object
+      properties:
+        content:
+          type: string
+        userId:
+          type: string
+      required:
+        - content
+        - userId
+
+    Note:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - title
+        - content
+        - tags
+        - createdAt
+        - updatedAt
+
+    NoteInput:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        userId:
+          type: string
+      required:
+        - title
+        - userId
+
+    NoteUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    DailyUsage:
+      type: object
+      properties:
+        userId:
+          type: string
+        aiQueries:
+          type: integer
+        imagesGenerated:
+          type: integer
+        aiQueriesLimit:
+          type: integer
+        imagesLimit:
+          type: integer
+        date:
+          type: string
+      required:
+        - userId
+        - aiQueries
+        - imagesGenerated
+        - aiQueriesLimit
+        - imagesLimit
+        - date
+
+    QuizResult:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        topic:
+          type: string
+        score:
+          type: integer
+        total:
+          type: integer
+        percentage:
+          type: number
+        difficulty:
+          type: string
+        questionType:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - score
+        - total
+        - percentage
+        - createdAt
+
+    QuizResultInput:
+      type: object
+      properties:
+        topic:
+          type: string
+        score:
+          type: integer
+        total:
+          type: integer
+        percentage:
+          type: number
+        difficulty:
+          type: string
+        questionType:
+          type: string
+        userId:
+          type: string
+      required:
+        - score
+        - total
+        - percentage
+        - userId
+
+    FlashcardSet:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        topic:
+          type: string
+        cards:
+          type: array
+          items:
+            $ref: "#/components/schemas/Flashcard"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - topic
+        - cards
+        - createdAt
+
+    FlashcardSetInput:
+      type: object
+      properties:
+        topic:
+          type: string
+        cards:
+          type: array
+          items:
+            $ref: "#/components/schemas/Flashcard"
+        userId:
+          type: string
+      required:
+        - topic
+        - cards
+        - userId
+
+    Summary:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        sourceType:
+          type: string
+        originalText:
+          type: string
+        summary:
+          type: string
+        keyPoints:
+          type: array
+          items:
+            type: string
+        examQuestions:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - summary
+        - keyPoints
+        - examQuestions
+        - createdAt
+
+    SummaryInput:
+      type: object
+      properties:
+        sourceType:
+          type: string
+        originalText:
+          type: string
+        summary:
+          type: string
+        keyPoints:
+          type: array
+          items:
+            type: string
+        examQuestions:
+          type: array
+          items:
+            type: string
+        userId:
+          type: string
+      required:
+        - summary
+        - userId
+
+    GeneratedImage:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        prompt:
+          type: string
+        enhancedPrompt:
+          type: ["string", "null"]
+        imageUrl:
+          type: string
+        style:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - prompt
+        - imageUrl
+        - createdAt
+
+    GeneratedImageInput:
+      type: object
+      properties:
+        prompt:
+          type: string
+        enhancedPrompt:
+          type: ["string", "null"]
+        imageUrl:
+          type: string
+        style:
+          type: string
+        userId:
+          type: string
+      required:
+        - prompt
+        - imageUrl
+        - userId
+
+    Mindmap:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        topic:
+          type: string
+        mapData:
+          $ref: "#/components/schemas/MindmapResponse"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - topic
+        - mapData
+        - createdAt
+
+    MindmapSaveInput:
+      type: object
+      properties:
+        topic:
+          type: string
+        mapData:
+          $ref: "#/components/schemas/MindmapResponse"
+        userId:
+          type: string
+      required:
+        - topic
+        - mapData
+        - userId
+
+    Translation:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        originalText:
+          type: string
+        translatedText:
+          type: string
+        sourceLanguage:
+          type: string
+        targetLanguage:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - originalText
+        - translatedText
+        - targetLanguage
+        - createdAt
+
+    TranslationInput:
+      type: object
+      properties:
+        originalText:
+          type: string
+        translatedText:
+          type: string
+        sourceLanguage:
+          type: string
+        targetLanguage:
+          type: string
+        userId:
+          type: string
+      required:
+        - originalText
+        - translatedText
+        - targetLanguage
+        - userId
+
+    HistoryResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistoryItem"
+        analytics:
+          $ref: "#/components/schemas/Analytics"
+      required:
+        - items
+        - analytics
+
+    HistoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - type
+        - title
+        - createdAt
+
+    Analytics:
+      type: object
+      properties:
+        totalQueriesThisWeek:
+          type: integer
+        totalQueriesSavedByCache:
+          type: integer
+        studyStreakDays:
+          type: integer
+        mostUsedFeature:
+          type: string
+        queriesByDay:
+          type: array
+          items:
+            $ref: "#/components/schemas/DayCount"
+        usageByFeature:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureCount"
+      required:
+        - totalQueriesThisWeek
+        - totalQueriesSavedByCache
+        - studyStreakDays
+        - queriesByDay
+        - usageByFeature
+
+    DayCount:
+      type: object
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
+      required:
+        - date
+        - count
+
+    FeatureCount:
+      type: object
+      properties:
+        feature:
+          type: string
+        count:
+          type: integer
+      required:
+        - feature
+        - count
