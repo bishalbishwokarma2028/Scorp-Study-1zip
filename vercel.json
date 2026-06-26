@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm install && pnpm --filter @workspace/scorpstudy run build",
+  "outputDirectory": "artifacts/scorpstudy/dist/public",
+  "framework": null,
+  "installCommand": "pnpm install",
+  "rewrites": [
+    { "source": "/((?!.*\\.).*)", "destination": "/index.html" }
+  ],
+  "env": {
+    "BASE_PATH": "/"
+  }
+}
