@@ -1,9 +1,7 @@
-import { db } from "@workspace/db";
-import { dailyUsageTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { supabase } from "./supabaseAdmin";
 
-const AI_QUERIES_LIMIT = 30;
-const IMAGES_LIMIT = 3;
+export const AI_QUERIES_LIMIT = 30;
+export const IMAGES_LIMIT = 3;
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -11,49 +9,49 @@ function today(): string {
 
 export async function getOrCreateUsage(userId: string) {
   const date = today();
-  const existing = await db
+
+  const { data: existing } = await supabase
+    .from("daily_usage")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("date", date)
+    .maybeSingle();
+
+  if (existing) return existing;
+
+  const { data: created } = await supabase
+    .from("daily_usage")
+    .insert({ user_id: userId, date, ai_queries: 0, images_generated: 0 })
     .select()
-    .from(dailyUsageTable)
-    .where(and(eq(dailyUsageTable.userId, userId), eq(dailyUsageTable.date, date)))
-    .limit(1);
+    .single();
 
-  if (existing.length > 0) {
-    return existing[0];
-  }
-
-  const [created] = await db
-    .insert(dailyUsageTable)
-    .values({ userId, date, aiQueries: 0, imagesGenerated: 0 })
-    .returning();
-  return created;
+  return created!;
 }
 
 export async function checkAiLimit(userId: string): Promise<boolean> {
   const usage = await getOrCreateUsage(userId);
-  return usage.aiQueries < AI_QUERIES_LIMIT;
+  return usage.ai_queries < AI_QUERIES_LIMIT;
 }
 
 export async function checkImageLimit(userId: string): Promise<boolean> {
   const usage = await getOrCreateUsage(userId);
-  return usage.imagesGenerated < IMAGES_LIMIT;
+  return usage.images_generated < IMAGES_LIMIT;
 }
 
 export async function incrementAiQueries(userId: string) {
-  const date = today();
   const usage = await getOrCreateUsage(userId);
-  await db
-    .update(dailyUsageTable)
-    .set({ aiQueries: usage.aiQueries + 1 })
-    .where(and(eq(dailyUsageTable.userId, userId), eq(dailyUsageTable.date, date)));
+  await supabase
+    .from("daily_usage")
+    .update({ ai_queries: usage.ai_queries + 1 })
+    .eq("user_id", userId)
+    .eq("date", today());
 }
 
 export async function incrementImages(userId: string) {
-  const date = today();
   const usage = await getOrCreateUsage(userId);
-  await db
-    .update(dailyUsageTable)
-    .set({ imagesGenerated: usage.imagesGenerated + 1 })
-    .where(and(eq(dailyUsageTable.userId, userId), eq(dailyUsageTable.date, date)));
+  await supabase
+    .from("daily_usage")
+    .update({ images_generated: usage.images_generated + 1 })
+    .eq("user_id", userId)
+    .eq("date", today());
 }
-
-export { AI_QUERIES_LIMIT, IMAGES_LIMIT };

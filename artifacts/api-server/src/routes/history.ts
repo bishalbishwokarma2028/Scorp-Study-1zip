@@ -1,205 +1,244 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import {
-  quizResultsTable,
-  flashcardSetsTable,
-  summariesTable,
-  generatedImagesTable,
-  mindmapsTable,
-  translationsTable,
-} from "@workspace/db/schema";
-import { eq, desc, gte, and } from "drizzle-orm";
+import { supabase } from "../lib/supabaseAdmin";
 
 const router = Router();
 
 router.get("/quiz-results", async (req, res) => {
-  const userId = req.headers["x-user-id"] as string || req.query.userId as string;
+  const userId = (req.headers["x-user-id"] as string) || (req.query.userId as string);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const results = await db
-    .select()
-    .from(quizResultsTable)
-    .where(eq(quizResultsTable.userId, userId))
-    .orderBy(desc(quizResultsTable.createdAt));
+  const { data, error } = await supabase
+    .from("quiz_results")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
-  return res.json(results.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })));
+  if (error) return res.status(500).json({ error: error.message });
+  return res.json((data || []).map((r) => ({
+    id: r.id, userId: r.user_id, topic: r.topic, score: r.score, total: r.total,
+    percentage: r.percentage, difficulty: r.difficulty, questionType: r.question_type,
+    createdAt: r.created_at,
+  })));
 });
 
 router.post("/quiz-results", async (req, res) => {
   const { topic, score, total, percentage, difficulty, questionType, userId } = req.body;
 
-  const [result] = await db
-    .insert(quizResultsTable)
-    .values({ userId, topic, score, total, percentage, difficulty, questionType })
-    .returning();
+  const { data, error } = await supabase
+    .from("quiz_results")
+    .insert({ user_id: userId, topic, score, total, percentage, difficulty, question_type: questionType })
+    .select()
+    .single();
 
-  return res.status(201).json({ ...result, createdAt: result.createdAt.toISOString() });
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(201).json({
+    id: data.id, userId: data.user_id, topic: data.topic, score: data.score,
+    total: data.total, percentage: data.percentage, difficulty: data.difficulty,
+    questionType: data.question_type, createdAt: data.created_at,
+  });
 });
 
 router.get("/flashcard-sets", async (req, res) => {
-  const userId = req.headers["x-user-id"] as string || req.query.userId as string;
+  const userId = (req.headers["x-user-id"] as string) || (req.query.userId as string);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const sets = await db
-    .select()
-    .from(flashcardSetsTable)
-    .where(eq(flashcardSetsTable.userId, userId))
-    .orderBy(desc(flashcardSetsTable.createdAt));
+  const { data, error } = await supabase
+    .from("flashcard_sets")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
-  return res.json(sets.map((s) => ({ ...s, createdAt: s.createdAt.toISOString() })));
+  if (error) return res.status(500).json({ error: error.message });
+  return res.json((data || []).map((s) => ({
+    id: s.id, userId: s.user_id, topic: s.topic, cards: s.cards, createdAt: s.created_at,
+  })));
 });
 
 router.post("/flashcard-sets", async (req, res) => {
   const { topic, cards, userId } = req.body;
 
-  const [set] = await db
-    .insert(flashcardSetsTable)
-    .values({ userId, topic, cards })
-    .returning();
+  const { data, error } = await supabase
+    .from("flashcard_sets")
+    .insert({ user_id: userId, topic, cards })
+    .select()
+    .single();
 
-  return res.status(201).json({ ...set, createdAt: set.createdAt.toISOString() });
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(201).json({
+    id: data.id, userId: data.user_id, topic: data.topic, cards: data.cards, createdAt: data.created_at,
+  });
 });
 
 router.delete("/flashcard-sets/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const userId = req.body.userId || req.headers["x-user-id"] as string;
+  const userId = req.body.userId || (req.headers["x-user-id"] as string);
 
-  await db
-    .delete(flashcardSetsTable)
-    .where(and(eq(flashcardSetsTable.id, id), eq(flashcardSetsTable.userId, userId)));
-
+  const { error } = await supabase.from("flashcard_sets").delete().eq("id", id).eq("user_id", userId);
+  if (error) return res.status(500).json({ error: error.message });
   return res.status(204).send();
 });
 
 router.get("/summaries", async (req, res) => {
-  const userId = req.headers["x-user-id"] as string || req.query.userId as string;
+  const userId = (req.headers["x-user-id"] as string) || (req.query.userId as string);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const results = await db
-    .select()
-    .from(summariesTable)
-    .where(eq(summariesTable.userId, userId))
-    .orderBy(desc(summariesTable.createdAt));
+  const { data, error } = await supabase
+    .from("summaries")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
-  return res.json(results.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })));
+  if (error) return res.status(500).json({ error: error.message });
+  return res.json((data || []).map((r) => ({
+    id: r.id, userId: r.user_id, sourceType: r.source_type, originalText: r.original_text,
+    summary: r.summary, keyPoints: r.key_points || [], examQuestions: r.exam_questions || [],
+    createdAt: r.created_at,
+  })));
 });
 
 router.post("/summaries", async (req, res) => {
   const { sourceType, originalText, summary, keyPoints = [], examQuestions = [], userId } = req.body;
 
-  const [result] = await db
-    .insert(summariesTable)
-    .values({ userId, sourceType, originalText, summary, keyPoints, examQuestions })
-    .returning();
+  const { data, error } = await supabase
+    .from("summaries")
+    .insert({ user_id: userId, source_type: sourceType, original_text: originalText, summary, key_points: keyPoints, exam_questions: examQuestions })
+    .select()
+    .single();
 
-  return res.status(201).json({ ...result, createdAt: result.createdAt.toISOString() });
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(201).json({
+    id: data.id, userId: data.user_id, sourceType: data.source_type, originalText: data.original_text,
+    summary: data.summary, keyPoints: data.key_points || [], examQuestions: data.exam_questions || [],
+    createdAt: data.created_at,
+  });
 });
 
 router.get("/images", async (req, res) => {
-  const userId = req.headers["x-user-id"] as string || req.query.userId as string;
+  const userId = (req.headers["x-user-id"] as string) || (req.query.userId as string);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const images = await db
-    .select()
-    .from(generatedImagesTable)
-    .where(eq(generatedImagesTable.userId, userId))
-    .orderBy(desc(generatedImagesTable.createdAt));
+  const { data, error } = await supabase
+    .from("generated_images")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
-  return res.json(images.map((i) => ({ ...i, createdAt: i.createdAt.toISOString() })));
+  if (error) return res.status(500).json({ error: error.message });
+  return res.json((data || []).map((i) => ({
+    id: i.id, userId: i.user_id, prompt: i.prompt, enhancedPrompt: i.enhanced_prompt,
+    imageUrl: i.image_url, style: i.style, createdAt: i.created_at,
+  })));
 });
 
 router.post("/images", async (req, res) => {
   const { prompt, enhancedPrompt, imageUrl, style, userId } = req.body;
 
-  const [image] = await db
-    .insert(generatedImagesTable)
-    .values({ userId, prompt, enhancedPrompt, imageUrl, style })
-    .returning();
+  const { data, error } = await supabase
+    .from("generated_images")
+    .insert({ user_id: userId, prompt, enhanced_prompt: enhancedPrompt, image_url: imageUrl, style })
+    .select()
+    .single();
 
-  return res.status(201).json({ ...image, createdAt: image.createdAt.toISOString() });
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(201).json({
+    id: data.id, userId: data.user_id, prompt: data.prompt, enhancedPrompt: data.enhanced_prompt,
+    imageUrl: data.image_url, style: data.style, createdAt: data.created_at,
+  });
 });
 
 router.delete("/images/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const userId = req.body.userId || req.headers["x-user-id"] as string;
+  const userId = req.body.userId || (req.headers["x-user-id"] as string);
 
-  await db
-    .delete(generatedImagesTable)
-    .where(and(eq(generatedImagesTable.id, id), eq(generatedImagesTable.userId, userId)));
-
+  const { error } = await supabase.from("generated_images").delete().eq("id", id).eq("user_id", userId);
+  if (error) return res.status(500).json({ error: error.message });
   return res.status(204).send();
 });
 
 router.get("/mindmaps", async (req, res) => {
-  const userId = req.headers["x-user-id"] as string || req.query.userId as string;
+  const userId = (req.headers["x-user-id"] as string) || (req.query.userId as string);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const maps = await db
-    .select()
-    .from(mindmapsTable)
-    .where(eq(mindmapsTable.userId, userId))
-    .orderBy(desc(mindmapsTable.createdAt));
+  const { data, error } = await supabase
+    .from("mindmaps")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
-  return res.json(maps.map((m) => ({ ...m, createdAt: m.createdAt.toISOString() })));
+  if (error) return res.status(500).json({ error: error.message });
+  return res.json((data || []).map((m) => ({
+    id: m.id, userId: m.user_id, topic: m.topic, mapData: m.map_data, createdAt: m.created_at,
+  })));
 });
 
 router.post("/mindmaps", async (req, res) => {
   const { topic, mapData, userId } = req.body;
 
-  const [map] = await db
-    .insert(mindmapsTable)
-    .values({ userId, topic, mapData })
-    .returning();
+  const { data, error } = await supabase
+    .from("mindmaps")
+    .insert({ user_id: userId, topic, map_data: mapData })
+    .select()
+    .single();
 
-  return res.status(201).json({ ...map, createdAt: map.createdAt.toISOString() });
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(201).json({
+    id: data.id, userId: data.user_id, topic: data.topic, mapData: data.map_data, createdAt: data.created_at,
+  });
 });
 
 router.get("/translations", async (req, res) => {
-  const userId = req.headers["x-user-id"] as string || req.query.userId as string;
+  const userId = (req.headers["x-user-id"] as string) || (req.query.userId as string);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const translations = await db
-    .select()
-    .from(translationsTable)
-    .where(eq(translationsTable.userId, userId))
-    .orderBy(desc(translationsTable.createdAt));
+  const { data, error } = await supabase
+    .from("translations")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
-  return res.json(translations.map((t) => ({ ...t, createdAt: t.createdAt.toISOString() })));
+  if (error) return res.status(500).json({ error: error.message });
+  return res.json((data || []).map((t) => ({
+    id: t.id, userId: t.user_id, originalText: t.original_text, translatedText: t.translated_text,
+    sourceLanguage: t.source_language, targetLanguage: t.target_language, createdAt: t.created_at,
+  })));
 });
 
 router.post("/translations", async (req, res) => {
   const { originalText, translatedText, sourceLanguage, targetLanguage, userId } = req.body;
 
-  const [translation] = await db
-    .insert(translationsTable)
-    .values({ userId, originalText, translatedText, sourceLanguage, targetLanguage })
-    .returning();
+  const { data, error } = await supabase
+    .from("translations")
+    .insert({ user_id: userId, original_text: originalText, translated_text: translatedText, source_language: sourceLanguage, target_language: targetLanguage })
+    .select()
+    .single();
 
-  return res.status(201).json({ ...translation, createdAt: translation.createdAt.toISOString() });
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(201).json({
+    id: data.id, userId: data.user_id, originalText: data.original_text, translatedText: data.translated_text,
+    sourceLanguage: data.source_language, targetLanguage: data.target_language, createdAt: data.created_at,
+  });
 });
 
 router.delete("/translations/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const userId = req.body.userId || req.headers["x-user-id"] as string;
+  const userId = req.body.userId || (req.headers["x-user-id"] as string);
 
-  await db
-    .delete(translationsTable)
-    .where(and(eq(translationsTable.id, id), eq(translationsTable.userId, userId)));
-
+  const { error } = await supabase.from("translations").delete().eq("id", id).eq("user_id", userId);
+  if (error) return res.status(500).json({ error: error.message });
   return res.status(204).send();
 });
 
 router.get("/usage", async (req, res) => {
-  const userId = req.headers["x-user-id"] as string || req.query.userId as string;
+  const userId = (req.headers["x-user-id"] as string) || (req.query.userId as string);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   const { getOrCreateUsage, AI_QUERIES_LIMIT, IMAGES_LIMIT } = await import("../lib/usageService");
   const usage = await getOrCreateUsage(userId);
 
   return res.json({
-    userId: usage.userId,
-    aiQueries: usage.aiQueries,
-    imagesGenerated: usage.imagesGenerated,
+    userId: usage.user_id,
+    aiQueries: usage.ai_queries,
+    imagesGenerated: usage.images_generated,
     aiQueriesLimit: AI_QUERIES_LIMIT,
     imagesLimit: IMAGES_LIMIT,
     date: usage.date,
@@ -207,36 +246,42 @@ router.get("/usage", async (req, res) => {
 });
 
 router.get("/history", async (req, res) => {
-  const userId = req.headers["x-user-id"] as string || req.query.userId as string;
+  const userId = (req.headers["x-user-id"] as string) || (req.query.userId as string);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   const oneWeekAgo = new Date();
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-  const [quizzes, summaries, images, maps, translations] = await Promise.all([
-    db.select().from(quizResultsTable).where(eq(quizResultsTable.userId, userId)).orderBy(desc(quizResultsTable.createdAt)),
-    db.select().from(summariesTable).where(eq(summariesTable.userId, userId)).orderBy(desc(summariesTable.createdAt)),
-    db.select().from(generatedImagesTable).where(eq(generatedImagesTable.userId, userId)).orderBy(desc(generatedImagesTable.createdAt)),
-    db.select().from(mindmapsTable).where(eq(mindmapsTable.userId, userId)).orderBy(desc(mindmapsTable.createdAt)),
-    db.select().from(translationsTable).where(eq(translationsTable.userId, userId)).orderBy(desc(translationsTable.createdAt)),
+  const [quizzesRes, summariesRes, imagesRes, mapsRes, translationsRes] = await Promise.all([
+    supabase.from("quiz_results").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    supabase.from("summaries").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    supabase.from("generated_images").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    supabase.from("mindmaps").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    supabase.from("translations").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
   ]);
 
+  const quizzes = quizzesRes.data || [];
+  const summaries = summariesRes.data || [];
+  const images = imagesRes.data || [];
+  const maps = mapsRes.data || [];
+  const translations = translationsRes.data || [];
+
   const items = [
-    ...quizzes.map((q) => ({ id: `quiz-${q.id}`, type: "quiz", title: q.topic || "Quiz", description: `Score: ${q.score}/${q.total} (${q.percentage}%)`, createdAt: q.createdAt.toISOString() })),
-    ...summaries.map((s) => ({ id: `summary-${s.id}`, type: "summary", title: s.sourceType || "Summary", description: s.summary.slice(0, 100) + "...", createdAt: s.createdAt.toISOString() })),
-    ...images.map((i) => ({ id: `image-${i.id}`, type: "image", title: i.prompt.slice(0, 50), description: i.style || "AI Image", createdAt: i.createdAt.toISOString() })),
-    ...maps.map((m) => ({ id: `mindmap-${m.id}`, type: "mindmap", title: m.topic, description: "Mind Map", createdAt: m.createdAt.toISOString() })),
-    ...translations.map((t) => ({ id: `translation-${t.id}`, type: "translation", title: `→ ${t.targetLanguage}`, description: t.originalText.slice(0, 100), createdAt: t.createdAt.toISOString() })),
+    ...quizzes.map((q) => ({ id: `quiz-${q.id}`, type: "quiz", title: q.topic || "Quiz", description: `Score: ${q.score}/${q.total} (${q.percentage}%)`, createdAt: q.created_at })),
+    ...summaries.map((s) => ({ id: `summary-${s.id}`, type: "summary", title: s.source_type || "Summary", description: (s.summary || "").slice(0, 100) + "...", createdAt: s.created_at })),
+    ...images.map((i) => ({ id: `image-${i.id}`, type: "image", title: (i.prompt || "").slice(0, 50), description: i.style || "AI Image", createdAt: i.created_at })),
+    ...maps.map((m) => ({ id: `mindmap-${m.id}`, type: "mindmap", title: m.topic, description: "Mind Map", createdAt: m.created_at })),
+    ...translations.map((t) => ({ id: `translation-${t.id}`, type: "translation", title: `→ ${t.target_language}`, description: (t.original_text || "").slice(0, 100), createdAt: t.created_at })),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const queriesByDay: Record<string, number> = {};
   const usageByFeature: Record<string, number> = {
     chat: 0,
-    quiz: quizzes.filter((q) => new Date(q.createdAt) >= oneWeekAgo).length,
-    summary: summaries.filter((s) => new Date(s.createdAt) >= oneWeekAgo).length,
-    image: images.filter((i) => new Date(i.createdAt) >= oneWeekAgo).length,
-    mindmap: maps.filter((m) => new Date(m.createdAt) >= oneWeekAgo).length,
-    translation: translations.filter((t) => new Date(t.createdAt) >= oneWeekAgo).length,
+    quiz: quizzes.filter((q) => new Date(q.created_at) >= oneWeekAgo).length,
+    summary: summaries.filter((s) => new Date(s.created_at) >= oneWeekAgo).length,
+    image: images.filter((i) => new Date(i.created_at) >= oneWeekAgo).length,
+    mindmap: maps.filter((m) => new Date(m.created_at) >= oneWeekAgo).length,
+    translation: translations.filter((t) => new Date(t.created_at) >= oneWeekAgo).length,
   };
 
   items

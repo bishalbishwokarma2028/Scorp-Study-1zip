@@ -1,35 +1,35 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { notesTable } from "@workspace/db/schema";
-import { eq, and, ilike, desc, asc } from "drizzle-orm";
+import { supabase } from "../lib/supabaseAdmin";
 
 const router = Router();
 
 router.get("/", async (req, res) => {
-  const userId = req.query.userId as string || req.headers["x-user-id"] as string;
+  const userId = (req.query.userId as string) || (req.headers["x-user-id"] as string);
   const search = req.query.search as string | undefined;
   const sort = (req.query.sort as string) || "newest";
 
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  let query = db.select().from(notesTable).where(
-    search
-      ? and(eq(notesTable.userId, userId), ilike(notesTable.title, `%${search}%`))
-      : eq(notesTable.userId, userId)
-  );
+  let query = supabase.from("notes").select("*").eq("user_id", userId);
 
-  const notes = await (sort === "oldest"
-    ? query.orderBy(asc(notesTable.createdAt))
-    : sort === "title"
-    ? query.orderBy(asc(notesTable.title))
-    : query.orderBy(desc(notesTable.createdAt)));
+  if (search) query = query.ilike("title", `%${search}%`);
+
+  if (sort === "oldest") query = query.order("created_at", { ascending: true });
+  else if (sort === "title") query = query.order("title", { ascending: true });
+  else query = query.order("created_at", { ascending: false });
+
+  const { data: notes, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
 
   return res.json(
-    notes.map((n) => ({
-      ...n,
+    (notes || []).map((n) => ({
+      id: n.id,
+      userId: n.user_id,
+      title: n.title,
+      content: n.content,
       tags: n.tags || [],
-      createdAt: n.createdAt.toISOString(),
-      updatedAt: n.updatedAt.toISOString(),
+      createdAt: n.created_at,
+      updatedAt: n.updated_at,
     }))
   );
 });
@@ -38,73 +38,93 @@ router.post("/", async (req, res) => {
   const { title, content = "", tags = [], userId } = req.body;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const [note] = await db
-    .insert(notesTable)
-    .values({ userId, title, content, tags })
-    .returning();
+  const { data: note, error } = await supabase
+    .from("notes")
+    .insert({ user_id: userId, title, content, tags })
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
 
   return res.status(201).json({
-    ...note,
+    id: note.id,
+    userId: note.user_id,
+    title: note.title,
+    content: note.content,
     tags: note.tags || [],
-    createdAt: note.createdAt.toISOString(),
-    updatedAt: note.updatedAt.toISOString(),
+    createdAt: note.created_at,
+    updatedAt: note.updated_at,
   });
 });
 
 router.get("/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const userId = req.query.userId as string || req.headers["x-user-id"] as string;
+  const userId = (req.query.userId as string) || (req.headers["x-user-id"] as string);
 
-  const [note] = await db
-    .select()
-    .from(notesTable)
-    .where(and(eq(notesTable.id, id), eq(notesTable.userId, userId)))
-    .limit(1);
+  const { data: note, error } = await supabase
+    .from("notes")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
 
+  if (error) return res.status(500).json({ error: error.message });
   if (!note) return res.status(404).json({ error: "Note not found" });
 
   return res.json({
-    ...note,
+    id: note.id,
+    userId: note.user_id,
+    title: note.title,
+    content: note.content,
     tags: note.tags || [],
-    createdAt: note.createdAt.toISOString(),
-    updatedAt: note.updatedAt.toISOString(),
+    createdAt: note.created_at,
+    updatedAt: note.updated_at,
   });
 });
 
 router.patch("/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const userId = req.body.userId || req.headers["x-user-id"] as string;
+  const userId = req.body.userId || (req.headers["x-user-id"] as string);
   const { title, content, tags } = req.body;
 
-  const updates: Record<string, unknown> = { updatedAt: new Date() };
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (title !== undefined) updates.title = title;
   if (content !== undefined) updates.content = content;
   if (tags !== undefined) updates.tags = tags;
 
-  const [note] = await db
-    .update(notesTable)
-    .set(updates)
-    .where(and(eq(notesTable.id, id), eq(notesTable.userId, userId)))
-    .returning();
+  const { data: note, error } = await supabase
+    .from("notes")
+    .update(updates)
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select()
+    .maybeSingle();
 
+  if (error) return res.status(500).json({ error: error.message });
   if (!note) return res.status(404).json({ error: "Note not found" });
 
   return res.json({
-    ...note,
+    id: note.id,
+    userId: note.user_id,
+    title: note.title,
+    content: note.content,
     tags: note.tags || [],
-    createdAt: note.createdAt.toISOString(),
-    updatedAt: note.updatedAt.toISOString(),
+    createdAt: note.created_at,
+    updatedAt: note.updated_at,
   });
 });
 
 router.delete("/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const userId = req.body.userId || req.headers["x-user-id"] as string;
+  const userId = req.body.userId || (req.headers["x-user-id"] as string);
 
-  await db
-    .delete(notesTable)
-    .where(and(eq(notesTable.id, id), eq(notesTable.userId, userId)));
+  const { error } = await supabase
+    .from("notes")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
 
+  if (error) return res.status(500).json({ error: error.message });
   return res.status(204).send();
 });
 
