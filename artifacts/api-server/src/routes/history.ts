@@ -236,12 +236,12 @@ router.get("/usage", async (req, res) => {
   const usage = await getOrCreateUsage(userId);
 
   return res.json({
-    userId: usage.user_id,
-    aiQueries: usage.ai_queries,
-    imagesGenerated: usage.images_generated,
+    userId: usage?.user_id ?? userId,
+    aiQueries: usage?.ai_queries ?? 0,
+    imagesGenerated: usage?.images_generated ?? 0,
     aiQueriesLimit: AI_QUERIES_LIMIT,
     imagesLimit: IMAGES_LIMIT,
-    date: usage.date,
+    date: usage?.date ?? new Date().toISOString().slice(0, 10),
   });
 });
 

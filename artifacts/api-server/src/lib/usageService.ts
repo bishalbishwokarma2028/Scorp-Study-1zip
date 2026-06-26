@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseAdmin";
+import { logger } from "./logger";
 
 export const AI_QUERIES_LIMIT = 30;
 export const IMAGES_LIMIT = 3;
@@ -8,38 +9,61 @@ function today(): string {
 }
 
 export async function getOrCreateUsage(userId: string) {
-  const date = today();
+  if (!userId) return null;
 
-  const { data: existing } = await supabase
-    .from("daily_usage")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("date", date)
-    .maybeSingle();
+  try {
+    const date = today();
 
-  if (existing) return existing;
+    const { data: existing, error: selectError } = await supabase
+      .from("daily_usage")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("date", date)
+      .maybeSingle();
 
-  const { data: created } = await supabase
-    .from("daily_usage")
-    .insert({ user_id: userId, date, ai_queries: 0, images_generated: 0 })
-    .select()
-    .single();
+    if (selectError) {
+      logger.warn({ err: selectError }, "usageService: failed to select usage");
+      return null;
+    }
 
-  return created!;
+    if (existing) return existing;
+
+    const { data: created, error: insertError } = await supabase
+      .from("daily_usage")
+      .insert({ user_id: userId, date, ai_queries: 0, images_generated: 0 })
+      .select()
+      .single();
+
+    if (insertError) {
+      logger.warn({ err: insertError }, "usageService: failed to insert usage");
+      return null;
+    }
+
+    return created;
+  } catch (err) {
+    logger.warn({ err }, "usageService: unexpected error");
+    return null;
+  }
 }
 
 export async function checkAiLimit(userId: string): Promise<boolean> {
+  if (!userId) return true;
   const usage = await getOrCreateUsage(userId);
+  if (!usage) return true; // DB unreachable → allow request
   return usage.ai_queries < AI_QUERIES_LIMIT;
 }
 
 export async function checkImageLimit(userId: string): Promise<boolean> {
+  if (!userId) return true;
   const usage = await getOrCreateUsage(userId);
+  if (!usage) return true;
   return usage.images_generated < IMAGES_LIMIT;
 }
 
 export async function incrementAiQueries(userId: string) {
+  if (!userId) return;
   const usage = await getOrCreateUsage(userId);
+  if (!usage) return;
   await supabase
     .from("daily_usage")
     .update({ ai_queries: usage.ai_queries + 1 })
@@ -48,7 +72,9 @@ export async function incrementAiQueries(userId: string) {
 }
 
 export async function incrementImages(userId: string) {
+  if (!userId) return;
   const usage = await getOrCreateUsage(userId);
+  if (!usage) return;
   await supabase
     .from("daily_usage")
     .update({ images_generated: usage.images_generated + 1 })
