@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useUser } from "@clerk/react";
+import { useAuth } from "@/lib/authContext";
 import { useAiChat } from "@workspace/api-client-react";
 import { Send, Bot, User, Loader2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ interface Message {
 const SUBJECTS = ["General", "Mathematics", "Physics", "Chemistry", "Biology", "History", "Computer Science", "English", "Economics", "Philosophy"];
 
 export default function ChatPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "Hi! I'm **Bishal's Assistant** 👋. I'm here to help you study. Ask me anything about your subjects, or let me help you understand complex topics!" }
   ]);

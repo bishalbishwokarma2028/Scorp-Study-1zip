@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useUser } from "@clerk/react";
+import { useAuth } from "@/lib/authContext";
 import { useGenerateMindmap, useSaveMindmap, type MindmapResponse } from "@workspace/api-client-react";
 import { Network, Loader2, Save, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ const BRANCH_COLORS = [
 ];
 
 export default function MindmapPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const { toast } = useToast();
   const generateMindmap = useGenerateMindmap();
   const saveMindmap = useSaveMindmap();

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useUser } from "@clerk/react";
+import { useAuth } from "@/lib/authContext";
 import { useGenerateQuiz, useSaveQuizResult } from "@workspace/api-client-react";
 import { Brain, Trophy, RotateCcw, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ interface QuizQuestion {
 type QuizState = "setup" | "taking" | "results";
 
 export default function QuizPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const { toast } = useToast();
   const generateQuiz = useGenerateQuiz();
   const saveResult = useSaveQuizResult();

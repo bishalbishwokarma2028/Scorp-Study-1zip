@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useUser } from "@clerk/react";
+import { useAuth } from "@/lib/authContext";
 import { useGetFormula } from "@workspace/api-client-react";
 import { Calculator, Brain, Loader2, Delete } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ const SCI_BUTTONS = [
 ];
 
 export default function CalculatorPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const { toast } = useToast();
   const getFormula = useGetFormula();
 

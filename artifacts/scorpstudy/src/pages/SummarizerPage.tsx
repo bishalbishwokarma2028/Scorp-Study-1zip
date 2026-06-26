@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useUser } from "@clerk/react";
+import { useAuth } from "@/lib/authContext";
 import { useSummarizeText, useSaveSummary } from "@workspace/api-client-react";
 import { FileText, Loader2, Save, Copy, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ interface SummaryResult {
 }
 
 export default function SummarizerPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const { toast } = useToast();
   const summarize = useSummarizeText();
   const save = useSaveSummary();

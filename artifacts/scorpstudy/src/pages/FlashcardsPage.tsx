@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useUser } from "@clerk/react";
+import { useAuth } from "@/lib/authContext";
 import { useGenerateFlashcards, useSaveFlashcardSet } from "@workspace/api-client-react";
 import { BookOpen, ChevronLeft, ChevronRight, RotateCcw, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ interface Flashcard {
 }
 
 export default function FlashcardsPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const { toast } = useToast();
   const generateFlashcards = useGenerateFlashcards();
   const saveSet = useSaveFlashcardSet();

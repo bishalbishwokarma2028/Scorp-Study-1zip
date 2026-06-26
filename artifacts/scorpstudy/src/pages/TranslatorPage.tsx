@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useUser } from "@clerk/react";
+import { useAuth } from "@/lib/authContext";
 import { useTranslateText, useSaveTranslation } from "@workspace/api-client-react";
 import { Languages, Loader2, Copy, Save, ArrowRight, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ const LANGUAGES = [
 ];
 
 export default function TranslatorPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const { toast } = useToast();
   const translateText = useTranslateText();
   const saveTranslation = useSaveTranslation();

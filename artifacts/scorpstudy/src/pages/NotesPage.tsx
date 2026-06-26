@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useUser } from "@clerk/react";
+import { useAuth } from "@/lib/authContext";
 import { useListNotes, useCreateNote, useUpdateNote, useDeleteNote, useEnhanceNote, useSummarizeNote, getListNotesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { StickyNote, Plus, Trash2, Wand2, FileText, Search, Save, Loader2, X, Tag } from "lucide-react";
@@ -22,7 +22,7 @@ interface Note {
 }
 
 export default function NotesPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
 

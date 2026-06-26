@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useClerk, useUser } from "@clerk/react";
+import { useAuth } from "@/lib/authContext";
 import {
   MessageSquare, Brain, BookOpen, FileText, Image, StickyNote,
   Network, Languages, Calculator, History, LogOut, GraduationCap, ChevronRight
@@ -23,8 +23,7 @@ const navItems = [
 
 export default function Sidebar() {
   const [location] = useLocation();
-  const { signOut } = useClerk();
-  const { user } = useUser();
+  const { user, signOut } = useAuth();
 
   return (
     <aside data-testid="sidebar" className="fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-sidebar-border flex flex-col z-40">
@@ -66,17 +65,16 @@ export default function Sidebar() {
       <div className="p-4 border-t border-sidebar-border">
         <div className="flex items-center gap-3 mb-3">
           <Avatar className="w-8 h-8">
-            <AvatarImage src={user?.imageUrl} />
             <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
-              {user?.firstName?.[0] ?? user?.emailAddresses[0]?.emailAddress[0]?.toUpperCase() ?? "U"}
+              {user?.email?.[0]?.toUpperCase() ?? "U"}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-sidebar-foreground truncate">
-              {user?.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : "Student"}
+              {user?.user_metadata?.full_name ?? user?.email?.split("@")[0] ?? "Student"}
             </p>
             <p className="text-xs text-muted-foreground truncate">
-              {user?.emailAddresses[0]?.emailAddress}
+              {user?.email}
             </p>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { useUser } from "@clerk/react";
+import { useAuth } from "@/lib/authContext";
 import { useGetHistory, useGetDailyUsage, getGetHistoryQueryKey, getGetDailyUsageQueryKey } from "@workspace/api-client-react";
 import { History, Brain, FileText, Image, Network, Languages, BarChart2, Flame, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +27,7 @@ const TYPE_COLORS: Record<string, string> = {
 const PIE_COLORS = ["#3B82F6", "#8B5CF6", "#F59E0B", "#10B981", "#EC4899", "#06B6D4"];
 
 export default function HistoryPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
 
   const { data: historyData, isLoading: loadingHistory } = useGetHistory(
     { query: { queryKey: getGetHistoryQueryKey(), enabled: !!user } }
