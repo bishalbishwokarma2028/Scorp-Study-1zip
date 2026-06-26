@@ -1,0 +1,3 @@
+- [ScorpStudy Clerk Setup](scorpstudy-clerk.md) — Clerk is Replit-managed; @layer clerk directive must precede @import tailwindcss; vite optimize:false required.
+- [ScorpStudy AI Provider](scorpstudy-ai-provider.md) — multi-key fallback chain (Groq x5 → Gemini x5 → OpenAI → HuggingFace); identity questions use static cache.
+- [ScorpStudy API Conventions](scorpstudy-api-conventions.md) — userId passed in req.body for mutations, req.query for GETs; no JWT tokens; do NOT re-run codegen.
